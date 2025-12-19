@@ -41,7 +41,7 @@ Custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that enabl
 
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/YOUR_USERNAME/ComfyUI-Attome-S3.git
+git clone https://github.com/attome-ai/ComfyUI-Attome-S3.git
 cd ComfyUI-Attome-S3
 pip install -r requirements.txt
 ```
@@ -243,7 +243,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If you encounter any issues or have questions:
 
 1. Check the [Troubleshooting](#troubleshooting) section
-2. Search [existing issues](https://github.com/YOUR_USERNAME/ComfyUI-Attome-S3/issues)
+2. Search [existing issues](https://github.com/attome-ai/ComfyUI-Attome-S3/issues)
 3. Open a new issue with:
    - ComfyUI version
    - Python version
