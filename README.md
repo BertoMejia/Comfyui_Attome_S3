@@ -42,7 +42,7 @@ Custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that enabl
 ```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/attome-ai/Comfyui_Attome_S3.git
-cd ComfyUI-Attome-S3
+cd Comfyui_Attome_S3
 pip install -r requirements.txt
 ```
 
@@ -51,7 +51,7 @@ pip install -r requirements.txt
 ```bash
 cd ComfyUI_windows_portable\ComfyUI\custom_nodes
 git clone https://github.com/attome-ai/Comfyui_Attome_S3.git
-cd ComfyUI-Attome-S3
+cd Comfyui_Attome_S3
 ..\..\..\python_embeded\python.exe -m pip install -r requirements.txt
 ```
 
