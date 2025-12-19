@@ -174,7 +174,6 @@ ENDPOINT_URL=
 - ✅ Cached in memory - only reads file once per session
 - ✅ Can still override with config node when needed
 
-**Security Note:** The `env.txt` file should NOT be committed to version control. It's included in `.gitignore` by default.
 
 ### Empty S3 Key Behavior
 
