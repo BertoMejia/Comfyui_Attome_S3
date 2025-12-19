@@ -356,6 +356,15 @@ class AttomeS3SaveImage:
     OUTPUT_NODE = True
 
     def save_image(self, s3_config, image, s3_key, format="PNG", quality=95):
+        # Automatically adjust file extension to match format
+        base_key = os.path.splitext(s3_key)[0]  # Remove existing extension
+        format_extensions = {
+            "PNG": ".png",
+            "JPEG": ".jpg",
+            "WEBP": ".webp"
+        }
+        s3_key = base_key + format_extensions.get(format, ".png")
+        
         # Convert from ComfyUI tensor format (BHWC) to PIL
         # Take first image in batch
         img_np = image[0].cpu().numpy()
@@ -484,6 +493,10 @@ class AttomeS3SaveAudio:
     OUTPUT_NODE = True
 
     def save_audio(self, s3_config, audio, s3_key, format="wav"):
+        # Automatically adjust file extension to match format
+        base_key = os.path.splitext(s3_key)[0]  # Remove existing extension
+        s3_key = base_key + f".{format}"
+        
         content_types = {
             "wav": "audio/wav",
             "mp3": "audio/mpeg",
@@ -665,6 +678,10 @@ class AttomeS3SaveVideo:
 
     def save_video(self, s3_config, frames, s3_key, fps=24.0, codec="mp4v"):
         import cv2
+
+        # Automatically adjust file extension to .mp4
+        base_key = os.path.splitext(s3_key)[0]  # Remove existing extension
+        s3_key = base_key + ".mp4"
 
         # Convert tensor to numpy
         frames_np = frames.cpu().numpy()
