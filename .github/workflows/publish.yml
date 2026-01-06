@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'attome-ai' }}
     
-    # 🌟 FIX 1: Link the job to the 'Attome' environment
     environment: Attome 
     
     steps:
@@ -29,5 +28,4 @@ jobs:
       - name: Publish Custom Node
         uses: Comfy-Org/publish-node-action@v1
         with:
-          ## FIX 2: Ensure the secret name is correctly referenced (uppercase)
           personal_access_token: ${{ secrets.COMFYUI_S3_API_KEY }}
