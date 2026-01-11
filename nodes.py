@@ -11,6 +11,10 @@ from PIL import Image
 import torch
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
+import subprocess
+import shutil
+import wave
+import struct
 
 
 # ============================================================================
@@ -900,6 +904,7 @@ class AttomeS3SaveVideo:
                 "save_metadata": ("BOOLEAN", {
                     "default": True,
                 }),
+                "audio": ("AUDIO",),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
         }
@@ -912,7 +917,7 @@ class AttomeS3SaveVideo:
     OUTPUT_NODE = True
     INPUT_IS_LIST = True
 
-    def save_video(self, frames, s3_key, s3_config=None, fps=24.0, codec="mp4v", save_metadata=True, prompt=None, extra_pnginfo=None):
+    def save_video(self, frames, s3_key, s3_config=None, fps=24.0, codec="mp4v", save_metadata=True, audio=None, prompt=None, extra_pnginfo=None):
         import cv2
 
         # When INPUT_IS_LIST is True, all arguments are passed as lists
@@ -921,6 +926,7 @@ class AttomeS3SaveVideo:
         fps = fps[0] if fps else 24.0
         codec = codec[0] if codec else "mp4v"
         save_metadata = save_metadata[0] if save_metadata else True
+        audio = audio[0] if audio else None
         prompt = prompt[0] if prompt else None
         extra_pnginfo = extra_pnginfo[0] if extra_pnginfo else None
 
@@ -946,6 +952,50 @@ class AttomeS3SaveVideo:
             # Get dimensions
             num_frames, height, width, _ = frames_np.shape
 
+            # Prepare audio if active
+            audio_path = None
+            if audio is not None:
+                try:
+                    import torchaudio
+                    waveform = audio["waveform"]
+                    sample_rate = audio["sample_rate"]
+                    if waveform.dim() == 3:
+                         waveform = waveform.squeeze(0)
+                    
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as a_tmp:
+                        audio_path = a_tmp.name
+                    
+                    try:
+                        torchaudio.save(audio_path, waveform, sample_rate, format="wav")
+                    except Exception as e:
+                        print(f"AttomeS3SaveVideo: torchaudio save failed ({e}), trying fallback...")
+                        # Fallback to wave module
+                        waveform_np = waveform.detach().cpu().numpy()
+                        # Ensure range -1 to 1
+                        if waveform_np.max() > 1.0 or waveform_np.min() < -1.0:
+                             waveform_np = np.clip(waveform_np, -1.0, 1.0)
+                        
+                        # Convert to 16-bit PCM
+                        waveform_int16 = (waveform_np * 32767).astype(np.int16)
+                        
+                        # Handle channels (wave expects interleaved)
+                        channels = waveform_int16.shape[0]
+                        if channels > 1:
+                            waveform_int16 = waveform_int16.T.flatten()
+                        
+                        with wave.open(audio_path, 'wb') as wav_file:
+                            wav_file.setnchannels(channels)
+                            wav_file.setsampwidth(2) # 16-bit
+                            wav_file.setframerate(sample_rate)
+                            wav_file.writeframes(waveform_int16.tobytes())
+
+                except Exception as e:
+                    print(f"AttomeS3SaveVideo: Failed to process audio: {e}")
+                    if audio_path and os.path.exists(audio_path):
+                        os.unlink(audio_path)
+                    audio_path = None
+
+            # Video temp file
             with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
                 tmp_path = tmp.name
 
@@ -973,11 +1023,58 @@ class AttomeS3SaveVideo:
                             video_file["desc"] = json.dumps(extra_pnginfo)
                         video_file.save()
                     except Exception: pass
+                
+                # Mux with audio if available and ffmpeg is present
+                final_video_path = tmp_path
+                if audio_path:
+                    # Try to find ffmpeg
+                    ffmpeg_path = shutil.which("ffmpeg")
+                    if not ffmpeg_path:
+                        try:
+                            print("AttomeS3SaveVideo: global ffmpeg not found, trying imageio_ffmpeg...")
+                            import imageio_ffmpeg
+                            ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+                            print(f"AttomeS3SaveVideo: using imageio_ffmpeg at {ffmpeg_path}")
+                        except ImportError:
+                            print("AttomeS3SaveVideo: imageio_ffmpeg not installed")
+                            pass
+                        except Exception as e:
+                            print(f"AttomeS3SaveVideo: imageio_ffmpeg error: {e}")
 
-                with open(tmp_path, "rb") as f:
+                    if ffmpeg_path:
+                        try:
+                            # Create a new temp file for the muxed output
+                            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as m_tmp:
+                                muxed_path = m_tmp.name
+                            m_tmp.close() # Close so ffmpeg can write to it
+
+                            cmd = [
+                                ffmpeg_path, "-y",
+                                "-v", "error",
+                                "-i", tmp_path,
+                                "-i", audio_path,
+                                "-c:v", "copy",
+                                "-c:a", "aac",
+                                "-strict", "experimental",
+                                "-shortest",
+                                muxed_path
+                            ]
+                            subprocess.run(cmd, check=True)
+                            
+                            # Update path to upload
+                            os.unlink(tmp_path) # Delete video-only file
+                            final_video_path = muxed_path
+                        except Exception as e:
+                            print(f"AttomeS3SaveVideo: FFmpeg muxing failed, saving video without audio. Error: {e}")
+                    else:
+                        print("AttomeS3SaveVideo: FFmpeg not found, saving video without audio.")
+
+                with open(final_video_path, "rb") as f:
                     data = f.read()
             finally:
-                os.unlink(tmp_path)
+                if os.path.exists(tmp_path): os.unlink(tmp_path)
+                if audio_path and os.path.exists(audio_path): os.unlink(audio_path)
+                if 'muxed_path' in locals() and os.path.exists(muxed_path): os.unlink(muxed_path)
 
             # Use dynamic key
             current_key = parse_dynamic_key(s3_key, i, len(frames))
