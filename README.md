@@ -37,7 +37,8 @@ Custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that enabl
 | **Attome S3 Load Text** | Load text file from S3 |
 | **Attome S3 Save Text** | Save text content to S3 |
 
-<img width="1000" height="747" alt="image" src="https://github.com/user-attachments/assets/7a41a7e9-b642-4e98-ad4f-3937492a4263" />
+<img width="1016" height="748" alt="image" src="https://github.com/user-attachments/assets/0aa82b3c-2556-4894-a65d-05765bbcc6d1" />
+
 
 ## Installation
 
