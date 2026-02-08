@@ -201,8 +201,8 @@ def parse_dynamic_key(s3_key, index=0, total=1):
     for placeholder, value in replacements.items():
         result = result.replace(placeholder, value)
     
-    # Always append index suffix if no placeholder is used
-    if "%index%" not in s3_key and "%count%" not in s3_key:
+    # Aappend index suffix if no placeholder is used and there are multiple images
+    if total > 1 and "%index%" not in s3_key and "%count%" not in s3_key:
         base, ext = os.path.splitext(result)
         result = f"{base}_{index + 1}{ext}"
     

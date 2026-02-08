@@ -1,7 +1,7 @@
 [project]
 name = "attome_s3"
 description = "Custom nodes for ComfyUI enabling seamless loading and saving of media files (images, videos, audio, text) directly from/to AWS S3 or S3-compatible storage services."
-version = "1.0.1"
+version = "1.0.2"
 license = {file = "LICENSE"} 
  classifiers = [
      # For OS-independent nodes (works on all operating systems)
